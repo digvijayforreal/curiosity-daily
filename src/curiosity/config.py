@@ -35,6 +35,8 @@ class Config:
     groq_api_key: str = ""
     gemini_model: str = "gemini-2.0-flash"
     groq_model: str = "llama-3.3-70b-versatile"
+    tavily_api_key: str = ""
+    api_base: str = ""  # public backend URL the static site calls
     contact: str = "curiosity-daily (https://github.com/your-user/curiosity-daily)"
 
     # runtime flags
@@ -109,6 +111,8 @@ def load_config(path: str | os.PathLike[str] | None = None, *, dry_run: bool = F
         groq_api_key=os.environ.get("GROQ_API_KEY", ""),
         gemini_model=os.environ.get("GEMINI_MODEL", "gemini-2.0-flash"),
         groq_model=os.environ.get("GROQ_MODEL", "openai/gpt-oss-20b"),
+        tavily_api_key=os.environ.get("TAVILY_API_KEY", ""),
+        api_base=os.environ.get("CURIOSITY_API_BASE", ""),
         contact=os.environ.get(
             "CURIOSITY_CONTACT",
             "curiosity-daily (https://github.com/your-user/curiosity-daily)",

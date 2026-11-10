@@ -39,6 +39,9 @@ def _header(site: dict[str, Any], base: str) -> str:
         f'<div><h1><a href="{base}index.html">{title}</a></h1>'
         f'<div class="tagline">{tagline}</div></div>'
         f'<nav><a href="{base}index.html">Today</a>'
+        f'<a href="{base}explore.html">Explore</a>'
+        f'<a href="{base}watchlist.html">Watchlist</a>'
+        f'<a href="{base}how-it-works.html">How it works</a>'
         f'<a href="{base}archive.html">Archive</a>'
         f'<a href="{base}feed.xml">RSS</a></nav>'
         "</header>"
@@ -66,7 +69,9 @@ def _footer(sizes: dict[str, Any] | None, accuracy: float | None) -> str:
     )
 
 
-def _page_shell(title: str, body: str, base: str) -> str:
+def _page_shell(title: str, body: str, base: str, *, api_base: str = "", app_js: bool = False) -> str:
+    api_script = f'<script>window.CURIOSITY_API_BASE="{api_base}";</script>' if app_js else ""
+    js_include = f'<script src="{base}app.js" defer></script>' if app_js else ""
     return (
         "<!doctype html><html lang=\"en\"><head>"
         '<meta charset="utf-8">'
@@ -74,9 +79,67 @@ def _page_shell(title: str, body: str, base: str) -> str:
         f"<title>{_e(title)}</title>"
         f'<link rel="stylesheet" href="{base}style.css">'
         f'<link rel="alternate" type="application/rss+xml" title="Curiosity Daily" href="{base}feed.xml">'
+        f"{api_script}{js_include}"
         "</head><body><div class=\"wrap\">"
         f"{body}"
         "</div></body></html>"
+    )
+
+
+def _render_explore_body(site: dict[str, Any], base: str) -> str:
+    header = _header(site, base)
+    return (
+        header
+        + '<div class="daymeta">Search any person, place or topic — see their Wikipedia profile, '
+        "image, interest trend and the latest from the web.</div>"
+        '<form id="searchForm" class="searchbar">'
+        '<input id="q" type="search" placeholder="e.g. Taylor Swift, Japan, Jensen Huang…" '
+        'autocomplete="off" autofocus>'
+        '<button type="submit">Search</button>'
+        "</form>"
+        '<div id="results"></div>'
+    )
+
+
+def _render_watchlist_body(site: dict[str, Any], base: str) -> str:
+    return (
+        _header(site, base)
+        + '<div class="daymeta">Subjects you are tracking. Each daily run refreshes their latest news.</div>'
+        '<div id="watchlist"></div>'
+    )
+
+
+_PIPELINE_STEPS = [
+    ("1 · Ingest", "Pull the day's top ~1000 Wikipedia articles, 60 days of history for the notable ones, and news from free RSS feeds."),
+    ("2 · Detect spikes", "Compare each page against its own baseline with a robust median/MAD z-score, keeping only genuine surges."),
+    ("3 · Cluster", "Group related pages into one story using Jina embeddings (e.g. 'Solar eclipse' + 'Totality')."),
+    ("4 · Store news", "Embed and store news in MongoDB with a 14-day expiry."),
+    ("5 · Hybrid retrieval", "Run a keyword search and a vector search separately, then fuse them with Reciprocal Rank Fusion."),
+    ("6 · AI explanation", "An agent writes a 2–3 sentence 'why it's trending' from the retrieved snippets only, then verifies every claim — or says 'reason unclear'."),
+    ("7 · Forecast", "Predict the next few days of views and label each topic Rising, Peaking or Fading, scored for accuracy the next day."),
+    ("8 · Publish", "Generate this site, an RSS feed and a share card. Your searches and watchlist use the same building blocks live."),
+]
+
+
+def _render_howitworks_body(site: dict[str, Any], base: str) -> str:
+    cards = "".join(
+        f'<li class="flow-step"><span class="flow-num">{_e(title)}</span>'
+        f'<span class="flow-text">{_e(text)}</span></li>'
+        for title, text in _PIPELINE_STEPS
+    )
+    return (
+        _header(site, base)
+        + '<div class="daymeta">How Curiosity Daily turns raw Wikipedia traffic into a grounded daily briefing.</div>'
+        f'<ol class="flow">{cards}</ol>'
+        '<div class="story"><h2>Grounded, not guessed</h2>'
+        '<p class="explanation">Every explanation is written only from retrieved news snippets and is '
+        "verified against them. When there is no supporting evidence, the topic is honestly marked "
+        "<em>reason unclear</em> rather than inventing a reason. No article text is copied — only short "
+        "titles and links.</p></div>"
+        '<div class="story"><h2>Free and automatic</h2>'
+        '<p class="explanation">A GitHub Action runs the whole pipeline every day and publishes this site. '
+        "It uses only free tiers: Wikimedia data, Jina embeddings, a free LLM, MongoDB Atlas and Tavily "
+        "web search.</p></div>"
     )
 
 
@@ -165,10 +228,13 @@ def publish_site(
     (out / "day").mkdir(exist_ok=True)
     (out / "cards").mkdir(exist_ok=True)
 
-    # CSS
+    # CSS + front-end JS
     shutil.copyfile(_TEMPLATES / "style.css", out / "style.css")
+    shutil.copyfile(_TEMPLATES / "app.js", out / "app.js")
     # Tell GitHub Pages not to run Jekyll over our files.
     (out / ".nojekyll").write_text("", encoding="utf-8")
+
+    api_base = (cfg.api_base or "").rstrip("/")
 
     header = _header(site, base)
     footer = _footer(sizes, accuracy)
@@ -209,6 +275,36 @@ def publish_site(
     )
     (out / "archive.html").write_text(
         _page_shell(f"{site.get('title','Curiosity Daily')} — Archive", archive_body, base),
+        encoding="utf-8",
+    )
+
+    # Interactive pages (search / watchlist) + static "how it works".
+    (out / "explore.html").write_text(
+        _page_shell(
+            f"{site.get('title','Curiosity Daily')} — Explore",
+            _render_explore_body(site, base),
+            base,
+            api_base=api_base,
+            app_js=True,
+        ),
+        encoding="utf-8",
+    )
+    (out / "watchlist.html").write_text(
+        _page_shell(
+            f"{site.get('title','Curiosity Daily')} — Watchlist",
+            _render_watchlist_body(site, base),
+            base,
+            api_base=api_base,
+            app_js=True,
+        ),
+        encoding="utf-8",
+    )
+    (out / "how-it-works.html").write_text(
+        _page_shell(
+            f"{site.get('title','Curiosity Daily')} — How it works",
+            _render_howitworks_body(site, base),
+            base,
+        ),
         encoding="utf-8",
     )
 

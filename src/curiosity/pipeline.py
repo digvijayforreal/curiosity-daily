@@ -139,6 +139,40 @@ def _seed_dry_run_accuracy(cfg: Config, store: Store, stories: list[Story], late
     store.save_forecast(seeded)
 
 
+def _refresh_watchlist(cfg: Config, store: Store, client, llm, day_iso: str) -> None:
+    """Update a dated snapshot for each tracked subject."""
+    from datetime import datetime, timezone
+
+    from .track import track_subject
+    from .websearch import make_websearch
+
+    watched = store.list_watch()
+    if not watched:
+        return
+    websearch = make_websearch(cfg)
+    log.info("Refreshing %d tracked subject(s).", len(watched))
+    for w in watched:
+        try:
+            r = track_subject(cfg, w["display"], wiki=client, websearch=websearch, llm=llm)
+            if not r.get("found"):
+                continue
+            store.save_tracking(
+                {
+                    "subject": w["subject"],
+                    "day": day_iso,
+                    "title": r.get("title", w["display"]),
+                    "image": r.get("image", ""),
+                    "summary": r.get("summary", ""),
+                    "status": (r.get("pageviews") or {}).get("status", ""),
+                    "today_views": (r.get("pageviews") or {}).get("today", 0),
+                    "web": r.get("web", [])[:4],
+                    "generated_at": datetime.now(timezone.utc).isoformat(),
+                }
+            )
+        except Exception as exc:
+            log.warning("Tracking failed for %s: %s", w.get("display"), exc)
+
+
 def run_pipeline(cfg: Config) -> dict[str, Any]:
     """Execute the full daily pipeline and publish the site. Returns a summary."""
     lag = int(cfg.wiki.get("lag_days", 1))
@@ -210,6 +244,13 @@ def run_pipeline(cfg: Config) -> dict[str, Any]:
 
     # 7. Persist stories --------------------------------------------------
     store.save_stories(day_iso, stories)
+
+    # 7b. Refresh tracked subjects (watchlist) ---------------------------
+    if not cfg.dry_run:
+        try:
+            _refresh_watchlist(cfg, store, client, llm, day_iso)
+        except Exception as exc:  # never let tracking break the daily run
+            log.warning("Watchlist refresh failed: %s", exc)
 
     # 8. Score previous day's forecasts ----------------------------------
     try:

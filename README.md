@@ -187,6 +187,51 @@ Example client config (e.g. for a FastMCP-compatible assistant):
 
 ---
 
+## Live search & tracking
+
+Beyond the daily briefing, you can look up **any** person, place or topic on
+demand and follow it over time.
+
+- **Website:** the **Explore** page has a search bar. For any subject you get a
+  Wikipedia profile, image, a 30-day interest trend, recent news from the web
+  (Tavily) and a short grounded AI summary. The **Watchlist** page shows the
+  subjects you follow, refreshed every day.
+- **Terminal:**
+  ```bash
+  uv run curiosity track "Virat Kohli"     # one-off live lookup
+  uv run curiosity watch "Narendra Modi"   # add to your daily watchlist
+  uv run curiosity watchlist               # see tracked subjects + latest news
+  ```
+
+### How the interactive part is wired
+
+GitHub Pages is static, so the live search is powered by a small **backend API**
+(FastAPI) that holds the secret keys. Run it locally:
+
+```bash
+uv run curiosity serve            # http://127.0.0.1:8000  (docs at /docs)
+```
+
+The **Explore** page automatically uses the backend when `CURIOSITY_API_BASE`
+is set. If it is blank, the page falls back to Wikipedia's public APIs directly
+(summary + image + trend) so search still works on the static site — only the
+web search, AI summary and tracking need the backend.
+
+### Deploy the backend for free (optional)
+
+To make the full search public, deploy the backend to a free host and point the
+site at it:
+
+1. Deploy with the included `Dockerfile` (or `render.yaml`) to **Render** or a
+   **Hugging Face Space**. Set the same env vars as your `.env`
+   (`MONGODB_URI`, `JINA_API_KEY`, `LLM_PROVIDER`, `GROQ_API_KEY`,
+   `TAVILY_API_KEY`, `CURIOSITY_CONTACT`).
+2. Copy the service's public URL (e.g. `https://curiosity-daily-api.onrender.com`).
+3. In your GitHub repo: **Settings → Secrets and variables → Actions →
+   Variables** → add `CURIOSITY_API_BASE` = that URL.
+4. Re-run the daily workflow. The published **Explore** / **Watchlist** pages
+   will now call your backend for full results and tracking.
+
 ## Commands
 
 | Command | What it does |
@@ -194,6 +239,14 @@ Example client config (e.g. for a FastMCP-compatible assistant):
 | `uv run curiosity run` | Full daily pipeline + publish `site/`. |
 | `uv run curiosity run --dry-run` | Same, offline, with bundled sample data. |
 | `uv run curiosity setup-indexes` | Create the two Atlas search/vector indexes. |
+| `uv run curiosity trending` | List today's trending stories. |
+| `uv run curiosity search <words>` | Hybrid keyword+vector news search. |
+| `uv run curiosity why <topic>` | Grounded "why it's trending" + sources. |
+| `uv run curiosity forecast <topic>` | Rising/Peaking/Fading outlook. |
+| `uv run curiosity track <subject>` | Live lookup of any person/place/topic. |
+| `uv run curiosity watch <subject>` | Add a subject to the daily watchlist. |
+| `uv run curiosity watchlist` | Show tracked subjects + latest updates. |
+| `uv run curiosity serve` | Run the web API backend (search + tracking). |
 | `uv run curiosity mcp` | Start the FastMCP server. |
 | `uv run pytest -q` | Run the test suite. |
 

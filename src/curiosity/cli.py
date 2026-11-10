@@ -210,6 +210,100 @@ def cmd_why(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_serve(args: argparse.Namespace) -> int:
+    from .server import serve
+
+    cfg = load_config(args.config)
+    if not cfg.mongodb_uri:
+        log.error("MONGODB_URI is not set; the API server needs the database.")
+        return 1
+    port = int(os.environ.get("PORT", args.port))  # hosts like Render inject $PORT
+    print(f"Starting Curiosity Daily API on http://{args.host}:{port}")
+    print(f"  Try: http://{args.host}:{port}/api/track?q=Taylor%20Swift")
+    print(f"  Interactive docs: http://{args.host}:{port}/docs")
+    serve(cfg, host=args.host, port=port)
+    return 0
+
+
+def cmd_track(args: argparse.Namespace) -> int:
+    from .track import track_subject
+
+    cfg = load_config(args.config, dry_run=args.dry_run)
+    q = " ".join(args.query)
+    r = track_subject(cfg, q)
+    if not r.get("found"):
+        print(f"Nothing found for '{q}'.")
+        return 0
+    print(f"\n{r['title']}  —  {r.get('description','')}")
+    if r.get("image"):
+        print(f"Image: {r['image']}")
+    pv = r.get("pageviews") or {}
+    if pv:
+        print(f"Wikipedia interest: {pv.get('status','')} ({pv.get('today',0):,} views today)")
+    if r.get("summary"):
+        print(f"\nLatest: {r['summary']}")
+    if r.get("web"):
+        print("\nSources:")
+        for w in r["web"][:5]:
+            print(f"  - {w['title']}  {w['url']}")
+    print()
+    return 0
+
+
+def cmd_watch(args: argparse.Namespace) -> int:
+    cfg, store = _open_store(args)
+    if store is None:
+        return 1
+    from .track import track_subject
+
+    q = " ".join(args.query)
+    r = track_subject(cfg, q)
+    if not r.get("found"):
+        print(f"Nothing found for '{q}', not added.")
+        return 0
+    title = r.get("title", q)
+    store.add_watch(q, title.replace(" ", "_"), title)
+    from datetime import datetime, timezone
+
+    from .util import iso, latest_available_day
+
+    store.save_tracking(
+        {
+            "subject": q.strip().lower(),
+            "day": iso(latest_available_day(int(cfg.wiki.get("lag_days", 1)))),
+            "title": title,
+            "image": r.get("image", ""),
+            "summary": r.get("summary", ""),
+            "status": (r.get("pageviews") or {}).get("status", ""),
+            "today_views": (r.get("pageviews") or {}).get("today", 0),
+            "web": r.get("web", [])[:4],
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+        }
+    )
+    print(f"Now tracking '{title}'. It will refresh with each daily run.")
+    return 0
+
+
+def cmd_watchlist(args: argparse.Namespace) -> int:
+    cfg, store = _open_store(args)
+    if store is None:
+        return 1
+    watched = store.list_watch()
+    if not watched:
+        print("Your watchlist is empty. Add one with: curiosity watch <name>")
+        return 0
+    latest = {t["subject"]: t for t in store.latest_tracking()}
+    print(f"\nTracking {len(watched)} subject(s):\n")
+    for w in watched:
+        snap = latest.get(w["subject"], {})
+        status = snap.get("status", "—")
+        print(f"- {w['display']}  [{status}]")
+        if snap.get("summary"):
+            print(f"    {snap['summary'][:160]}")
+    print()
+    return 0
+
+
 def cmd_forecast(args: argparse.Namespace) -> int:
     cfg, store = _open_store(args)
     if store is None:
@@ -267,6 +361,24 @@ def build_parser() -> argparse.ArgumentParser:
     p_fc = sub.add_parser("forecast", help="Show the Rising/Peaking/Fading forecast for a topic.")
     p_fc.add_argument("topic", nargs="+", help="Topic name, e.g. curiosity forecast jensen huang.")
     p_fc.set_defaults(func=cmd_forecast)
+
+    # --- interactive backend + tracking ---
+    p_sv = sub.add_parser("serve", help="Run the web API backend (search + tracking).")
+    p_sv.add_argument("--host", default="127.0.0.1", help="Bind host (use 0.0.0.0 when deploying).")
+    p_sv.add_argument("--port", type=int, default=8000, help="Bind port (default 8000).")
+    p_sv.set_defaults(func=cmd_serve)
+
+    p_tk = sub.add_parser("track", help="Live lookup of any person/place/topic (Wikipedia + web + AI).")
+    p_tk.add_argument("query", nargs="+", help="Subject, e.g. curiosity track Virat Kohli.")
+    p_tk.add_argument("--dry-run", action="store_true", help="Use mocked web search + LLM.")
+    p_tk.set_defaults(func=cmd_track)
+
+    p_wt = sub.add_parser("watch", help="Add a subject to your daily tracking watchlist.")
+    p_wt.add_argument("query", nargs="+", help="Subject to track, e.g. curiosity watch Narendra Modi.")
+    p_wt.set_defaults(func=cmd_watch)
+
+    p_wl = sub.add_parser("watchlist", help="Show your tracked subjects and their latest update.")
+    p_wl.set_defaults(func=cmd_watchlist)
 
     return parser
 

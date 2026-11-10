@@ -108,6 +108,45 @@ class WikiClient:
                 return extract.split(sep)[0].strip() + sep.strip()
         return extract.strip()
 
+    def resolve_title(self, query: str) -> str | None:
+        """Resolve a free-text query to the best matching article DB title.
+
+        Uses the MediaWiki opensearch endpoint (handles misspellings/redirects).
+        """
+        lang = self.project.split(".")[0]
+        url = (
+            f"https://{lang}.wikipedia.org/w/api.php?action=opensearch&limit=1"
+            f"&namespace=0&format=json&search={quote(query, safe='')}"
+        )
+        data = self._get(url)
+        # opensearch returns [query, [titles], [descriptions], [urls]]
+        if isinstance(data, list) and len(data) >= 2 and data[1]:
+            return data[1][0].replace(" ", "_")
+        return None
+
+    def page_info(self, title: str) -> dict[str, Any]:
+        """Return ``{title, display, extract, image, url}`` for an article.
+
+        ``image`` is a Wikipedia/Wikidata thumbnail URL (free to display) or "".
+        """
+        lang = self.project.split(".")[0]
+        url = SUMMARY_BASE_TMPL.format(lang=lang, title=quote(title, safe=""))
+        data = self._get(url)
+        if not data:
+            return {}
+        thumb = (data.get("thumbnail") or {}).get("source", "")
+        original = (data.get("originalimage") or {}).get("source", "")
+        page_url = ((data.get("content_urls") or {}).get("desktop") or {}).get("page", "")
+        return {
+            "title": data.get("title", title).replace(" ", "_"),
+            "display": data.get("title", title),
+            "description": data.get("description", "") or "",
+            "extract": data.get("extract", "") or "",
+            "image": thumb or original,
+            "image_large": original or thumb,
+            "url": page_url or f"https://{lang}.wikipedia.org/wiki/{quote(title)}",
+        }
+
 
 def _clean_snippet(text: str, limit: int = 280) -> str:
     """Collapse whitespace and strip HTML-ish tags, then truncate.

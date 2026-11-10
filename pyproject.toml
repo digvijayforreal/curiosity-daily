@@ -16,6 +16,8 @@ dependencies = [
     "pillow>=10.3",
     "python-dateutil>=2.9",
     "fastmcp>=2.0",
+    "fastapi>=0.110",
+    "uvicorn>=0.29",
 ]
 
 [project.optional-dependencies]

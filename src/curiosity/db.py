@@ -73,6 +73,8 @@ class MemoryStore:
         self._stories: dict[str, list[dict[str, Any]]] = {}
         self._forecasts: dict[str, dict[str, dict[str, Any]]] = {}
         self._runs: list[dict[str, Any]] = []
+        self._watch: dict[str, dict[str, Any]] = {}
+        self._tracking: dict[tuple[str, str], dict[str, Any]] = {}
 
     def upsert_pageview_series(self, title: str, series: dict[str, int]) -> None:
         self._pageviews.setdefault(title, {}).update(series)
@@ -144,6 +146,39 @@ class MemoryStore:
             "runs": len(self._runs),
         }
 
+    # --- watchlist / tracking ---
+    def add_watch(self, subject: str, title: str, display: str) -> None:
+        import datetime as _dt
+
+        key = subject.strip().lower()
+        self._watch[key] = {
+            "subject": key,
+            "title": title,
+            "display": display,
+            "added_at": _dt.datetime.now(_dt.timezone.utc).isoformat(),
+        }
+
+    def remove_watch(self, subject: str) -> None:
+        self._watch.pop(subject.strip().lower(), None)
+
+    def list_watch(self) -> list[dict[str, Any]]:
+        return list(self._watch.values())
+
+    def save_tracking(self, doc: dict[str, Any]) -> None:
+        self._tracking[(doc["subject"], doc["day"])] = doc
+
+    def get_tracking(self, subject: str, limit: int = 30) -> list[dict[str, Any]]:
+        key = subject.strip().lower()
+        rows = [v for (s, _), v in self._tracking.items() if s == key]
+        return sorted(rows, key=lambda r: r.get("day", ""), reverse=True)[:limit]
+
+    def latest_tracking(self) -> list[dict[str, Any]]:
+        latest: dict[str, dict[str, Any]] = {}
+        for (s, _), v in self._tracking.items():
+            if s not in latest or v.get("day", "") > latest[s].get("day", ""):
+                latest[s] = v
+        return list(latest.values())
+
 
 # --------------------------------------------------------------------------- #
 # MongoDB backend
@@ -173,6 +208,8 @@ class MongoStore:
         self.stories = self.db["stories"]
         self.forecasts = self.db["forecasts"]
         self.runs = self.db["runs"]
+        self.watchlist = self.db["watchlist"]
+        self.tracking = self.db["tracking"]
         self._ensure_basic_indexes()
 
     def _ensure_basic_indexes(self) -> None:
@@ -189,6 +226,8 @@ class MongoStore:
         self.news.create_index([("url", ASCENDING)])
         # TTL index: documents expire ttl_days after `created_at`.
         self.news.create_index("created_at", expireAfterSeconds=ttl_days * 86400)
+        self.watchlist.create_index([("subject", ASCENDING)], unique=True)
+        self.tracking.create_index([("subject", ASCENDING), ("day", ASCENDING)], unique=True)
 
     # --- pageviews ---
     def upsert_pageview_series(self, title: str, series: dict[str, int]) -> None:
@@ -306,6 +345,46 @@ class MongoStore:
             total += size_mb
         out["total_mb"] = round(total, 3)
         return out
+
+    # --- watchlist / tracking ---
+    def add_watch(self, subject: str, title: str, display: str) -> None:
+        import datetime as _dt
+
+        key = subject.strip().lower()
+        self.watchlist.update_one(
+            {"subject": key},
+            {
+                "$set": {"subject": key, "title": title, "display": display},
+                "$setOnInsert": {"added_at": _dt.datetime.now(_dt.timezone.utc).isoformat()},
+            },
+            upsert=True,
+        )
+
+    def remove_watch(self, subject: str) -> None:
+        self.watchlist.delete_one({"subject": subject.strip().lower()})
+
+    def list_watch(self) -> list[dict[str, Any]]:
+        return list(self.watchlist.find({}, {"_id": 0}).sort("display", 1))
+
+    def save_tracking(self, doc: dict[str, Any]) -> None:
+        self.tracking.update_one(
+            {"subject": doc["subject"], "day": doc["day"]}, {"$set": doc}, upsert=True
+        )
+
+    def get_tracking(self, subject: str, limit: int = 30) -> list[dict[str, Any]]:
+        key = subject.strip().lower()
+        return list(
+            self.tracking.find({"subject": key}, {"_id": 0}).sort("day", -1).limit(limit)
+        )
+
+    def latest_tracking(self) -> list[dict[str, Any]]:
+        pipeline = [
+            {"$sort": {"day": -1}},
+            {"$group": {"_id": "$subject", "doc": {"$first": "$$ROOT"}}},
+            {"$replaceRoot": {"newRoot": "$doc"}},
+            {"$project": {"_id": 0}},
+        ]
+        return list(self.tracking.aggregate(pipeline))
 
     # --- search / vector index management ---
     def setup_search_indexes(self) -> list[str]:

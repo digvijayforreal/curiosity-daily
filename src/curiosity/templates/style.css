@@ -110,3 +110,48 @@ footer.site code { background: #f1f0f8; padding: 1px 6px; border-radius: 6px; }
   header.site { flex-direction: column; gap: 4px; }
   header.site nav a { margin-left: 0; margin-right: 14px; }
 }
+
+/* ---- Explore / search ---- */
+.searchbar { display: flex; gap: 10px; margin: 8px 0 22px; }
+.searchbar input {
+  flex: 1; font-size: 1.05rem; padding: 13px 16px;
+  border: 1px solid var(--line); border-radius: 12px; background: var(--card); color: var(--ink);
+  box-shadow: var(--shadow);
+}
+.searchbar input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+.searchbar button {
+  font-size: 1rem; font-weight: 600; padding: 0 22px; border: none; border-radius: 12px;
+  background: var(--accent); color: #fff; cursor: pointer;
+}
+.searchbar button:hover { filter: brightness(1.05); }
+
+.loading { color: var(--muted); padding: 24px; text-align: center; }
+
+.result { background: var(--card); border: 1px solid var(--line); border-radius: 16px;
+  padding: 20px; box-shadow: var(--shadow); }
+.result-head { display: flex; gap: 18px; align-items: flex-start; flex-wrap: wrap; }
+.portrait { width: 120px; height: 120px; object-fit: cover; border-radius: 14px; background: #eee; }
+.result-meta { flex: 1; min-width: 220px; }
+.result-meta h2 { margin: 0 0 2px; }
+.muted { color: var(--muted); font-size: 0.95rem; }
+.spark { display: block; margin: 10px 0; }
+.summary { margin: 14px 0; }
+.track-btn { margin-top: 10px; border: 1px solid var(--accent); color: var(--accent); background: var(--accent-soft);
+  border-radius: 999px; padding: 7px 16px; font-weight: 600; cursor: pointer; }
+.track-btn:hover { background: var(--accent); color: #fff; }
+.track-btn:disabled { opacity: 0.6; cursor: default; }
+.hint { color: var(--muted); font-size: 0.85rem; }
+
+.gallery { display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0; }
+.thumb { width: 150px; height: 100px; object-fit: cover; border-radius: 10px; background: #eee; }
+.sources .src { color: var(--muted); font-size: 0.82rem; margin-left: 6px; }
+.wiki-link { display: inline-block; margin-top: 10px; font-weight: 600; }
+
+/* ---- How it works flow ---- */
+.flow { list-style: none; padding: 0; margin: 10px 0 24px; display: grid; gap: 12px; }
+.flow-step { background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--accent);
+  border-radius: 12px; padding: 14px 16px; box-shadow: var(--shadow); }
+.flow-num { display: block; font-weight: 700; color: var(--accent); margin-bottom: 4px; }
+.flow-text { color: var(--ink); }
+
+@media (min-width: 680px) { .flow { grid-template-columns: 1fr 1fr; } }

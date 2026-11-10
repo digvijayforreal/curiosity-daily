@@ -1,0 +1,27 @@
+# One-click deploy config for Render (https://render.com — free tier).
+# In the Render dashboard: New + -> Blueprint -> point at this repo.
+# Then add the environment variables below (as Secrets) in the service settings.
+services:
+  - type: web
+    name: curiosity-daily-api
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    envVars:
+      - key: MONGODB_URI
+        sync: false        # set in dashboard (secret)
+      - key: MONGODB_DB
+        value: curiosity
+      - key: JINA_API_KEY
+        sync: false
+      - key: LLM_PROVIDER
+        value: groq
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GROQ_MODEL
+        value: openai/gpt-oss-20b
+      - key: TAVILY_API_KEY
+        sync: false
+      - key: CURIOSITY_CONTACT
+        sync: false
