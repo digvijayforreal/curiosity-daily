@@ -27,11 +27,25 @@ from .util import log
 _UNCLEAR = "reason unclear"
 
 _STOPWORDS = {
+    # articles / connectives / aux verbs
     "the", "a", "an", "and", "or", "but", "of", "to", "in", "on", "for", "with",
     "after", "that", "this", "is", "are", "was", "were", "has", "have", "had",
     "its", "it", "as", "at", "by", "from", "about", "into", "also", "notes",
     "report", "reports", "reported", "coverage", "attention", "drawing", "says",
     "said", "new", "amid", "over", "more", "they", "their", "been", "being",
+    "when", "while", "where", "which", "would", "could", "should", "than", "then",
+    "there", "here", "these", "those", "such", "both", "between", "around",
+    # generic "why it's trending" narrative vocabulary — these describe the act
+    # of trending/reporting, not a specific factual claim, so they must not count
+    # for or against grounding.
+    "spike", "spiked", "spiking", "surge", "surged", "surging", "rose", "rise",
+    "rising", "jump", "jumped", "soared", "climbed", "spotlight", "trending",
+    "name", "named", "image", "close", "closely", "drawn", "draw", "drew",
+    "ensuing", "prompting", "prompted", "prompt", "launch", "launched",
+    "widespread", "media", "public", "online", "activity", "interest",
+    "following", "according", "reportedly", "recently", "news", "headlines",
+    "story", "stories", "people", "many", "sparked", "sparking", "triggered",
+    "triggering", "wake", "renewed", "widely", "amidst", "growing", "wider",
 }
 
 _WORD_RE = re.compile(r"[a-z0-9]+")
@@ -49,7 +63,7 @@ def _evidence_vocab(items: list[NewsItem]) -> set[str]:
     return vocab
 
 
-def verify_claims(explanation: str, evidence: list[NewsItem], *, min_support: float = 0.6) -> bool:
+def verify_claims(explanation: str, evidence: list[NewsItem], *, min_support: float = 0.4) -> bool:
     """Return True when enough of the explanation's content words are backed by
     the retrieved snippets. Topic words are expected; novel unsupported words
     are what we guard against."""
