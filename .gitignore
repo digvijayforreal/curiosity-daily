@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+
+# uv / venv
+.venv/
+venv/
+
+# Env & secrets
+.env
+*.local
+
+# Build output. The site is published via the GitHub Actions Pages artifact,
+# so it is not committed. Remove this line if you prefer to commit site/.
+site/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# Test / cache
+.pytest_cache/
+.ruff_cache/
+*.log

@@ -1,0 +1,50 @@
+[project]
+name = "curiosity-daily"
+version = "0.1.0"
+description = "A fully automated daily briefing of what the world is suddenly curious about."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "Curiosity Daily" }]
+
+dependencies = [
+    "requests>=2.31",
+    "pyyaml>=6.0",
+    "feedparser>=6.0",
+    "pymongo>=4.8",
+    "pillow>=10.3",
+    "python-dateutil>=2.9",
+    "fastmcp>=2.0",
+]
+
+[project.optional-dependencies]
+# Optional, better forecaster. The pipeline falls back to a light pure-Python
+# damped-trend baseline when this extra is not installed, so it is not required.
+# On the Linux GitHub Actions runner wheels are available; on some platforms
+# statsforecast must be compiled, hence keeping it optional.
+forecast = [
+    "statsforecast>=1.7",
+    "pandas>=2.2",
+    "numpy>=1.26",
+]
+dev = [
+    "pytest>=8.0",
+]
+
+[project.scripts]
+curiosity = "curiosity.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/curiosity"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/curiosity/sample_data" = "curiosity/sample_data"
+"src/curiosity/templates" = "curiosity/templates"
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

@@ -1,0 +1,31 @@
+{
+  "junk_titles": [
+    "Main_Page",
+    "Special:Search",
+    "Wikipedia:Featured_articles",
+    "File:Example.jpg",
+    "Category:Living_people",
+    "List_of_highest-grossing_films",
+    "2026"
+  ],
+  "pages": {
+    "Solar_eclipse": { "baseline": 1300, "noise": 180, "spike": 96000, "summary": "A solar eclipse occurs when the Moon passes between the Sun and Earth, casting a shadow." },
+    "Totality": { "baseline": 240, "noise": 60, "spike": 21000, "summary": "Totality is the phase of a total solar eclipse during which the Sun is completely obscured." },
+    "Dune:_Part_Two": { "baseline": 3800, "noise": 500, "spike": 61000, "summary": "Dune: Part Two is a science fiction film directed by Denis Villeneuve." },
+    "Taylor_Swift": { "baseline": 21000, "noise": 2500, "spike": 139000, "summary": "Taylor Swift is an American singer-songwriter." },
+    "Nvidia": { "baseline": 8800, "noise": 900, "spike": 72000, "summary": "Nvidia is an American technology company that designs graphics processing units." },
+    "Mount_Etna": { "baseline": 760, "noise": 120, "spike": 29000, "summary": "Mount Etna is an active stratovolcano on the east coast of Sicily, Italy." },
+    "Cristiano_Ronaldo": { "baseline": 31000, "noise": 3000, "spike": 33000, "summary": "Cristiano Ronaldo is a Portuguese professional footballer." },
+    "Python_(programming_language)": { "baseline": 15000, "noise": 1200, "spike": 16000, "summary": "Python is a high-level, general-purpose programming language." }
+  },
+  "news": [
+    { "title": "Rare total solar eclipse sweeps across the region as millions watch totality", "url": "https://news.example.com/eclipse-totality", "source": "Example World", "snippet": "A rare total solar eclipse crossed the region today, with crowds gathering to witness a few minutes of totality as the Moon fully obscured the Sun." },
+    { "title": "Eclipse chasers travel for a glimpse of the Sun's corona during totality", "url": "https://news.example.com/eclipse-chasers", "source": "Example Science", "snippet": "Astronomers and eclipse chasers describe the solar eclipse and the brief totality when the Sun's corona became visible." },
+    { "title": "Dune: Part Two returns to cinemas ahead of awards season", "url": "https://news.example.com/dune-part-two-rerelease", "source": "Example Film", "snippet": "The science fiction film Dune: Part Two directed by Denis Villeneuve is back in cinemas, driving renewed interest." },
+    { "title": "Taylor Swift announces surprise new album, sending fans into a frenzy", "url": "https://news.example.com/taylor-swift-album", "source": "Example Music", "snippet": "Singer Taylor Swift announced a surprise new album overnight, prompting a surge of fan activity online." },
+    { "title": "Nvidia shares jump after record earnings beat Wall Street expectations", "url": "https://news.example.com/nvidia-earnings", "source": "Example Business", "snippet": "Technology company Nvidia reported record quarterly earnings, and its graphics processing units for AI continue to drive demand." },
+    { "title": "Mount Etna erupts, sending ash plume over Sicily", "url": "https://news.example.com/etna-eruption", "source": "Example World", "snippet": "The Mount Etna volcano on the east coast of Sicily erupted, sending a tall ash plume into the sky and disrupting flights." },
+    { "title": "Local council debates new parking rules downtown", "url": "https://news.example.com/parking-rules", "source": "Example Local", "snippet": "The city council met to debate changes to downtown parking rules and permit pricing." },
+    { "title": "Weather service forecasts a mild and dry week ahead", "url": "https://news.example.com/weather-week", "source": "Example Weather", "snippet": "Forecasters expect mild and dry conditions across much of the country for the coming week." }
+  ]
+}

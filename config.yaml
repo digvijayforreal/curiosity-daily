@@ -1,0 +1,78 @@
+# ---------------------------------------------------------------------------
+# Curiosity Daily — non-secret configuration.
+# Secrets (API keys, DB URI) live in environment variables, never here.
+# ---------------------------------------------------------------------------
+
+wiki:
+  # Wikimedia project to analyse.
+  project: en.wikipedia
+  access: all-access
+  agent: all-agents
+  # How many of the day's top articles to pull (API caps at 1000).
+  top_n: 1000
+  # Days of per-article history fetched for each candidate (used as baseline).
+  history_days: 60
+  # Pageviews lag ~1-2 days; how many days back from "today" to treat as latest.
+  lag_days: 1
+
+detect:
+  # Keep at most this many stories after spike detection.
+  max_stories: 15
+  # Robust z-score threshold (median/MAD based) to count as a spike.
+  z_threshold: 3.5
+  # A candidate must also exceed this absolute view count on the spike day.
+  min_views: 8000
+  # Only consider this many of the strongest raw candidates for history fetch.
+  max_candidates: 100
+
+cluster:
+  # Cosine similarity above which two pages are merged into one story.
+  merge_threshold: 0.82
+
+embeddings:
+  model: jina-embeddings-v3
+  dimensions: 512
+  # Max input strings per Jina request (API allows up to 2048).
+  batch_size: 64
+  # Approximate monthly token budget; warn when run usage pushes near it.
+  monthly_token_budget: 1000000
+
+retrieval:
+  # How many news items each sub-search returns before fusion.
+  candidates_per_search: 20
+  # Reciprocal-rank-fusion constant.
+  rrf_k: 60
+  # Final number of fused news items handed to the agent.
+  top_k: 6
+
+news:
+  # TTL for stored news items / embeddings, in days.
+  ttl_days: 14
+  # How many items to keep per feed per run (keeps storage small).
+  max_items_per_feed: 40
+  # Free RSS feeds. Add or remove freely.
+  feeds:
+    - https://feeds.bbci.co.uk/news/world/rss.xml
+    - https://feeds.bbci.co.uk/news/technology/rss.xml
+    - https://rss.cnn.com/rss/edition_world.rss
+    - https://www.theguardian.com/world/rss
+    - https://www.theguardian.com/technology/rss
+    - http://rss.cnn.com/rss/edition.rss
+    - https://apnews.com/apf-topnews?output=rss
+    - https://feeds.npr.org/1001/rss.xml
+    - https://www.aljazeera.com/xml/rss/all.xml
+    - https://feeds.arstechnica.com/arstechnica/index
+
+forecast:
+  # Days ahead to forecast.
+  horizon: 3
+  # Slope thresholds (fraction of recent level) for Rising/Fading labels.
+  rising_pct: 0.08
+  fading_pct: -0.08
+
+site:
+  title: "Curiosity Daily"
+  tagline: "What the world suddenly wants to know."
+  base_url: ""          # e.g. https://your-user.github.io/curiosity-daily
+  output_dir: "site"
+  archive_days: 60

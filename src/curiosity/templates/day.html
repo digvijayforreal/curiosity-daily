@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}{{ site.title }}{% if day %}: {{ day|pretty_date }}{% endif %}{% endblock %}
+{% block content %}
+{% if not day %}
+  <p class="empty">No stories yet. The first daily run will fill this page.</p>
+{% else %}
+  <div class="daynav">
+    {% if older %}<a href="{{ base }}days/{{ older }}.html">&larr; {{ older }}</a>{% else %}<span></span>{% endif %}
+    <h1>Trending on {{ day|pretty_date }}</h1>
+    {% if newer %}<a href="{{ base }}days/{{ newer }}.html">{{ newer }} &rarr;</a>{% else %}<span></span>{% endif %}
+  </div>
+  {% if not stories %}<p class="empty">A quiet day: no big spikes detected.</p>{% endif %}
+  {% for s in stories %}
+  {% set f = s.forecast %}
+  <article class="story">
+    <div class="rank">{{ s.rank }}</div>
+    <div class="body">
+      <h2><a href="{{ s.url }}" rel="noopener">{{ s.title }}</a>
+        {% if f %}<span class="chip chip-{{ f.label }}">{{ f.label }}</span>{% endif %}</h2>
+      <p class="meta">{{ s.views|compact }} views &middot; {{ '%.0f'|format(s.ratio) }}&times; the usual level</p>
+      {% if s.summary %}<p class="summary">{{ s.summary }}</p>{% endif %}
+      {% if s.explanation %}
+        <p class="why{% if s.explanation_status != 'ok' %} unclear{% endif %}">
+          {% if s.explanation_status == 'ok' %}<strong>Why it&rsquo;s trending:</strong> {% endif %}{{ s.explanation }}</p>
+      {% else %}
+        <p class="why unclear">No explanation available today (pageview data only).</p>
+      {% endif %}
+      {% if s.sources %}
+      <ul class="sources">
+        {% for src in s.sources %}<li><a href="{{ src.url }}" rel="noopener">{{ src.source }}: {{ src.title }}</a></li>{% endfor %}
+      </ul>
+      {% endif %}
+      {% if s.pages|length > 1 %}
+      <p class="related">Related pages:
+        {% for p in s.pages[1:] %}<a href="{{ p.url }}" rel="noopener">{{ p.title|replace('_', ' ') }}</a>{% if not loop.last %}, {% endif %}{% endfor %}</p>
+      {% endif %}
+      {% if f %}
+      <p class="forecast">Next day forecast: about <strong>{{ f.predicted[0]|compact }}</strong> views
+        ({{ f.low|compact }} to {{ f.high|compact }}) &middot; confidence {{ f.confidence }}{% if f.first_day %} &middot; first day of the spike{% endif %}</p>
+      {% endif %}
+    </div>
+  </article>
+  {% endfor %}
+  {% if accuracy and accuracy.n %}
+  <p class="accuracy">Forecast check: across the last {{ accuracy.n }} scored forecasts the median error was
+    {{ '%.0f'|format(accuracy.median_ape * 100) }}% and the label (rising, peaking, fading) was right
+    {{ '%.0f'|format(accuracy.label_hit_rate * 100) }}% of the time.</p>
+  {% endif %}
+{% endif %}
+{% endblock %}
