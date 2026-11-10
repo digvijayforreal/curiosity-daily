@@ -157,7 +157,16 @@ class MongoStore:
         if not cfg.mongodb_uri:
             raise RuntimeError("MONGODB_URI is not set; cannot connect to MongoDB.")
         self.cfg = cfg
-        self.client: Any = MongoClient(cfg.mongodb_uri, appname="curiosity-daily")
+        # Use the certifi CA bundle so TLS to Atlas validates consistently across
+        # platforms (notably Windows, where the system store can be incomplete).
+        client_kwargs: dict[str, Any] = {"appname": "curiosity-daily"}
+        try:
+            import certifi
+
+            client_kwargs["tlsCAFile"] = certifi.where()
+        except ImportError:
+            pass
+        self.client: Any = MongoClient(cfg.mongodb_uri, **client_kwargs)
         self.db = self.client[cfg.mongodb_db]
         self.pageviews = self.db["pageviews"]
         self.news = self.db["news_items"]

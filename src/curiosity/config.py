@@ -108,7 +108,7 @@ def load_config(path: str | os.PathLike[str] | None = None, *, dry_run: bool = F
         gemini_api_key=os.environ.get("GEMINI_API_KEY", ""),
         groq_api_key=os.environ.get("GROQ_API_KEY", ""),
         gemini_model=os.environ.get("GEMINI_MODEL", "gemini-2.0-flash"),
-        groq_model=os.environ.get("GROQ_MODEL", "llama-3.3-70b-versatile"),
+        groq_model=os.environ.get("GROQ_MODEL", "openai/gpt-oss-20b"),
         contact=os.environ.get(
             "CURIOSITY_CONTACT",
             "curiosity-daily (https://github.com/your-user/curiosity-daily)",

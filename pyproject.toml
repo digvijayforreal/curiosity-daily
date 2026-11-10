@@ -12,6 +12,7 @@ dependencies = [
     "pyyaml>=6.0",
     "feedparser>=6.0",
     "pymongo>=4.8",
+    "certifi>=2024.2.2",
     "pillow>=10.3",
     "python-dateutil>=2.9",
     "fastmcp>=2.0",
