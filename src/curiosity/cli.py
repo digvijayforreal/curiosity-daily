@@ -38,13 +38,43 @@ def cmd_run(args: argparse.Namespace) -> int:
     try:
         summary = run_pipeline(cfg)
     except Exception as exc:  # top-level guard so CI surfaces a clear error
-        log.error("Pipeline failed: %s", exc)
+        msg = str(exc)
+        if "SSL handshake failed" in msg or "TLSV1_ALERT_INTERNAL_ERROR" in msg or "ServerSelectionTimeoutError" in type(exc).__name__:
+            _explain_mongo_error(exc)
+        else:
+            log.error("Pipeline failed: %s", exc)
         return 1
     log.info("Done. %d stories published for %s.", summary["stories"], summary["day"])
     out = cfg.root / cfg.site.get("output_dir", "site")
     print(f"Site written to: {out}")
     print(f"Open: {out / 'index.html'}")
     return 0
+
+
+def _explain_mongo_error(exc: Exception) -> None:
+    """Print a concise, human explanation for a MongoDB connection failure."""
+    msg = str(exc)
+    log.error("Could not connect to MongoDB Atlas.")
+    if "TLSV1_ALERT_INTERNAL_ERROR" in msg or "SSL handshake failed" in msg:
+        print(
+            "\nThe TCP connection reached Atlas but the TLS handshake on port 27017 was\n"
+            "rejected. Your Atlas settings are fine - this is almost always the network\n"
+            "you are on (office WiFi, a corporate laptop's security software, or an ISP)\n"
+            "blocking or inspecting MongoDB's port 27017.\n\n"
+            "Fixes, easiest first:\n"
+            "  1. Connect to a phone mobile hotspot and run the command again.\n"
+            "  2. Turn on a VPN, then run the command again.\n"
+            "  3. Skip local DB runs: let GitHub Actions run the pipeline (its cloud\n"
+            "     network is not blocked). Locally use `curiosity run --dry-run`.\n"
+        )
+    elif "timed out" in msg.lower() or "ServerSelectionTimeoutError" in type(exc).__name__:
+        print(
+            "\nConnection timed out. Check that your current IP is in the Atlas\n"
+            "Network Access list (or add 0.0.0.0/0 while testing) and that the\n"
+            "cluster is not paused.\n"
+        )
+    else:
+        print(f"\nDetails: {msg[:300]}\n")
 
 
 def cmd_setup_indexes(args: argparse.Namespace) -> int:
@@ -54,8 +84,12 @@ def cmd_setup_indexes(args: argparse.Namespace) -> int:
     if not cfg.mongodb_uri:
         log.error("MONGODB_URI is not set. Export it or add it to .env first.")
         return 1
-    store = MongoStore(cfg)
-    created = store.setup_search_indexes()
+    try:
+        store = MongoStore(cfg)
+        created = store.setup_search_indexes()
+    except Exception as exc:  # friendly message instead of a raw traceback
+        _explain_mongo_error(exc)
+        return 1
     if created:
         log.info("Created Atlas search indexes: %s", ", ".join(created))
         print("Created:", ", ".join(created))
