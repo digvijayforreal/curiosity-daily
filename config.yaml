@@ -73,6 +73,6 @@ forecast:
 site:
   title: "Curiosity Daily"
   tagline: "What the world suddenly wants to know."
-  base_url: ""          # e.g. https://your-user.github.io/curiosity-daily
+  base_url: "https://digvijayforreal.github.io/curiosity-daily"
   output_dir: "site"
   archive_days: 60
