@@ -10,6 +10,18 @@
   "use strict";
   var API = (window.CURIOSITY_API_BASE || "").replace(/\/$/, "");
 
+  // If no API base was baked in, probe the same origin — this makes the full
+  // backend work automatically both for `curiosity serve` locally and for a
+  // deployed host that serves the site. On static GitHub Pages the probe fails
+  // and we fall back to Wikipedia's public APIs.
+  function resolveApi(done) {
+    if (API) return done();
+    fetch(location.origin + "/api/health")
+      .then(function (r) { if (r.ok) API = location.origin; })
+      .catch(function () {})
+      .then(done, done);
+  }
+
   function el(id) { return document.getElementById(id); }
   function esc(s) {
     return (s || "").replace(/[&<>"']/g, function (c) {
@@ -176,5 +188,7 @@
     }).catch(function () { out.innerHTML = '<div class="empty">Could not load the watchlist.</div>'; });
   }
 
-  document.addEventListener("DOMContentLoaded", function () { initSearch(); initWatchlist(); });
+  document.addEventListener("DOMContentLoaded", function () {
+    resolveApi(function () { initSearch(); initWatchlist(); });
+  });
 })();
