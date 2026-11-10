@@ -116,13 +116,19 @@ def explain_story(
     embedder: Embedder,
     llm: LLM,
     cfg: Config,
+    *,
+    fallback_store=None,
 ) -> Story:
     """Populate ``story.explanation``, ``story.evidence`` and ``reason_unclear``.
 
     Degrades gracefully: any failure leaves the story with pageview data only.
+    ``fallback_store`` is used for retrieval when the primary (Atlas) store has
+    not yet indexed the day's freshly-inserted news.
     """
     try:
-        evidence = hybrid_search(store, embedder, _query_for(story, False), cfg)
+        evidence = hybrid_search(
+            store, embedder, _query_for(story, False), cfg, fallback_store=fallback_store
+        )
         attempts = 0
         explanation = ""
         confident = False
@@ -147,7 +153,9 @@ def explain_story(
             # Weak evidence / unverified: retry once with a reworded search.
             attempts += 1
             if attempts < 2:
-                evidence = hybrid_search(store, embedder, _query_for(story, True), cfg)
+                evidence = hybrid_search(
+                    store, embedder, _query_for(story, True), cfg, fallback_store=fallback_store
+                )
 
         verified = bool(explanation) and _UNCLEAR not in explanation.lower() and verify_claims(
             explanation, evidence

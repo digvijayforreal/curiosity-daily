@@ -28,24 +28,12 @@ def reciprocal_rank_fusion(
     return sorted(scores.items(), key=lambda kv: kv[1], reverse=True)
 
 
-def hybrid_search(
-    store,
-    embedder: Embedder,
-    query: str,
-    cfg: Config,
-    *,
-    top_k: int | None = None,
-) -> list[NewsItem]:
-    """Run keyword + vector search for ``query`` and return fused top results."""
-    per = int(cfg.retrieval.get("candidates_per_search", 20))
-    k = int(cfg.retrieval.get("rrf_k", 60))
-    top_k = top_k or int(cfg.retrieval.get("top_k", 6))
-
+def _fuse(store, embedder: Embedder, query: str, per: int, k: int, top_k: int) -> list[NewsItem]:
+    """Run keyword + vector search against one store and fuse with RRF."""
     keyword_hits = store.keyword_search(query, per)
     qvec = embedder.embed([query], TASK_QUERY)
     vector_hits = store.vector_search(qvec[0], per) if qvec else []
 
-    # Index items by URL (stable key) so the two lists can be fused and mapped.
     by_url: dict[str, NewsItem] = {}
     for item in keyword_hits + vector_hits:
         by_url.setdefault(item.url, item)
@@ -57,4 +45,31 @@ def hybrid_search(
     for url, _score in fused[:top_k]:
         if url in by_url:
             results.append(by_url[url])
+    return results
+
+
+def hybrid_search(
+    store,
+    embedder: Embedder,
+    query: str,
+    cfg: Config,
+    *,
+    top_k: int | None = None,
+    fallback_store=None,
+) -> list[NewsItem]:
+    """Run keyword + vector search for ``query`` and return fused top results.
+
+    ``fallback_store`` (optional) is consulted when the primary store returns
+    nothing. This matters during the daily run: Atlas indexes freshly-inserted
+    news asynchronously, so an in-memory store holding the day's just-fetched
+    news guarantees the agent still has evidence to work from. Atlas remains the
+    primary backend and powers later queries (MCP server, CLI) once indexed.
+    """
+    per = int(cfg.retrieval.get("candidates_per_search", 20))
+    k = int(cfg.retrieval.get("rrf_k", 60))
+    top_k = top_k or int(cfg.retrieval.get("top_k", 6))
+
+    results = _fuse(store, embedder, query, per, k, top_k)
+    if not results and fallback_store is not None:
+        results = _fuse(fallback_store, embedder, query, per, k, top_k)
     return results

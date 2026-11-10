@@ -189,8 +189,16 @@ def run_pipeline(cfg: Config) -> dict[str, Any]:
     log.info("Formed %d stories after clustering.", len(stories))
 
     # 5. Agent explanation + 6. Forecast ---------------------------------
+    # Atlas indexes freshly-inserted news asynchronously, so within this run the
+    # Atlas search may lag. Build an in-memory fallback holding the day's news
+    # (already embedded) so retrieval always has evidence available now.
+    from .db import MemoryStore
+
+    fallback = MemoryStore()
+    fallback.replace_news_for_day(day_iso, news)
+
     for story in stories:
-        explain_story(story, store, embedder, llm, cfg)
+        explain_story(story, store, embedder, llm, cfg, fallback_store=fallback)
         try:
             series = history.get(story.main_title, {})
             ordered = [series[d] for d in sorted(series.keys())]
