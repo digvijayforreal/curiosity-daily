@@ -272,6 +272,13 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    # Windows consoles default to cp1252 and choke on characters like non-breaking
+    # hyphens that appear in news-derived text. Force UTF-8 with safe fallback.
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[attr-defined]
+        except Exception:
+            pass
     _load_dotenv()
     parser = build_parser()
     args = parser.parse_args(argv)
